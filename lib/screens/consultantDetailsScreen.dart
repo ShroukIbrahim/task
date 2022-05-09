@@ -3,12 +3,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:another_flushbar/flushbar.dart';
+import 'package:dotted_border/dotted_border.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:grocery_store/blocs/account_bloc/account_bloc.dart';
+import 'package:grocery_store/blocs/banner_bloc/banner_bloc.dart';
 import 'package:grocery_store/blocs/notification_bloc/notification_bloc.dart';
 import 'package:grocery_store/config/colorsFile.dart';
 import 'package:grocery_store/config/paths.dart';
+import 'package:grocery_store/localization/language_constants.dart';
 import 'package:grocery_store/localization/localization_methods.dart';
 import 'package:grocery_store/models/consultPackage.dart';
 import 'package:grocery_store/models/consultReview.dart';
@@ -17,6 +22,7 @@ import 'package:grocery_store/models/promoCode.dart';
 import 'package:grocery_store/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:grocery_store/models/user_notification.dart';
 import 'package:grocery_store/screens/reviews_screen.dart';
 import 'package:grocery_store/screens/searchScreen.dart';
 import 'package:grocery_store/screens/userAccountScreen.dart';
@@ -32,6 +38,11 @@ import 'account_screen.dart';
 import 'bioDetailsScreen.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:hijri_picker/hijri_picker.dart';
+
+import 'notification_screen.dart';
+
+
+
 class ConsultantDetailsScreen extends StatefulWidget {
   final GroceryUser consultant;
   final GroceryUser loggedUser;
@@ -58,7 +69,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
   bool hijri=false, gregorian=true,loadDates=true;
   num _stackIndex = 1;
   String initialUrl = '',userImage,orderId,userName="dreamUser",time=DateFormat('yyyy-MM-dd').format(DateTime.now()),dateText="",
-  displayedTime=DateFormat('yyyy-MM-dd').format(DateTime.now()).toString();
+      displayedTime=DateFormat('yyyy-MM-dd').format(DateTime.now()).toString();
   consultPackage package;
   Orders order;
   bool avaliable=false,activeValue=false,applePay=false,googlePay=false,firstOpen=true;
@@ -68,9 +79,21 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
   String promoCodeId;
   dynamic price,discount=0;
   Size size;
+
+  BannerBloc bannerBloc;
+  User currentUser;
+  NotificationBloc notificationBloc;
+  String theme;
+
+  UserNotification userNotification;
+
+  bool readMoreVisible=false;
+
+
   @override
   void initState() {
     super.initState();
+    init();
     user=widget.loggedUser;
     getConsultReviews();
     getConsultPackages();
@@ -119,6 +142,57 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
       }
     });
   }
+  void init() {
+
+    user=widget.loggedUser;
+    getConsultReviews();
+    getConsultPackages();
+    cleanConsultDays();
+    accountBloc = BlocProvider.of<AccountBloc>(context);
+
+    if(user!=null)
+    {
+      getNumber();
+      accountBloc.add(GetAccountDetailsEvent(user.uid));
+    }
+    localFrom= DateTime.parse(widget.consultant.fromUtc).toLocal().hour;
+    localTo=DateTime.parse(widget.consultant.toUtc).toLocal().hour;
+    if(localTo==0)
+      localTo=24;
+    if(widget.consultant.languages.length>0)
+      widget.consultant.languages.forEach((element) { languages=languages+" "+element;});
+    if(widget.consultant.workTimes.length>0)
+    {
+      if( localFrom==12)
+        from="12 PM";
+      else if( localFrom==0)
+        from="12 AM";
+      else if( localFrom>12)
+        from=((localFrom)-12).toString()+" PM";
+      else
+        from=(localFrom).toString()+" AM";
+
+    }
+    if(widget.consultant.workTimes.length>0)
+    {
+      if( localTo==12)
+        to="12 PM";
+      else if( localTo==0||localTo==24)
+        to="12 AM";
+      else if( localTo>12)
+        to=((localTo)-12).toString()+" PM";
+      else
+        to=(localTo).toString()+" AM";
+
+    }
+    accountBloc.listen((state) {
+      print(state);
+      if (state is GetAccountDetailsCompletedState) {
+        user = state.user;
+      }
+    });
+  }
+
   Future<void> getNumber() async {
     try{
       print("getNumbera1");
@@ -134,74 +208,74 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
         if(value!=null&&value.docs!=null&&value.docs.length>0) {
           var order2=Orders.fromFirestore(value.docs[0]);
           setState(() {
-              order=order2;
-            });
+            order=order2;
+          });
           if(widget.consultant.consultType=="vocal"||widget.consultant.consultType=="glorified"){
             await FirebaseFirestore.instance
                 .collection(Paths.appAppointments)
                 .where( 'orderId', isEqualTo: order.orderId,)
                 .get().then((value) async {
               if(value.docs.length>0) {
-                  setState(() {
+                setState(() {
                   currentNumber =order.packageCallNum - value.docs.length;
                 });
               }
               else {
-                  setState(() {
-                    currentNumber =order.packageCallNum;
-               });
+                setState(() {
+                  currentNumber =order.packageCallNum;
+                });
               }
             }).catchError((err) {
               errorLog("getNumber1",err.toString());
-                setState(() {
+              setState(() {
                 load=false;
               });
             });
           }
           else
-            {
-              await FirebaseFirestore.instance
-                  .collection(Paths.forEverAppointmentsPath)
-                  .where( 'orderId', isEqualTo: order.orderId,)
-                  .get().then((value) async {
-                if(value.docs.length>0) {
-                    setState(() {
-                    currentNumber =order.packageCallNum - value.docs.length;
-                  });
-                }
-                else {
-                    setState(() {
-                      currentNumber =order.packageCallNum;
-                  });
-                }
-              }).catchError((err) {
-                errorLog("getNumber1",err.toString());
-                  setState(() {
-                  load=false;
+          {
+            await FirebaseFirestore.instance
+                .collection(Paths.forEverAppointmentsPath)
+                .where( 'orderId', isEqualTo: order.orderId,)
+                .get().then((value) async {
+              if(value.docs.length>0) {
+                setState(() {
+                  currentNumber =order.packageCallNum - value.docs.length;
                 });
+              }
+              else {
+                setState(() {
+                  currentNumber =order.packageCallNum;
+                });
+              }
+            }).catchError((err) {
+              errorLog("getNumber1",err.toString());
+              setState(() {
+                load=false;
               });
-            }
-         
+            });
+          }
+
         }
         else {
-           setState(() {
-           currentNumber=0;
-           order=null;
-         });
-        }
           setState(() {
+            currentNumber=0;
+            order=null;
+          });
+        }
+        setState(() {
           load=false;
         });
       }).catchError((err) {
         errorLog("getNumber",err.toString());
-          setState(() {
+        setState(() {
           load=false;
         });
       });
 
     }catch(e) {
       errorLog("getNumber",e.toString());
-        setState(() {
+      setState(() {
         load=false;
         currentNumber=0;
         order=null;
@@ -296,6 +370,18 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
       package=packages[index];
     });
   }
+
+  @override
+  void didChangeDependencies() {
+    getThemeName().then((theme) {
+      setState(() {
+        this.theme = theme;
+      });
+    });
+
+    super.didChangeDependencies();
+  }
+
   @override
   Widget build(BuildContext context) {
     String dayNow=DateTime.now().weekday.toString();
@@ -347,7 +433,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
         first=false;
       });
     }
-     size = MediaQuery.of(context).size;
+    size = MediaQuery.of(context).size;
     return Scaffold(
       key:_scaffoldKey,
       body: Stack(children: <Widget>[
@@ -355,9 +441,9 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
           children: <Widget>[
             Container(
               width: size.width,
-              height: size.height*.25,
+              height: size.height*0.18,
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
+                color: Colors.white,
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(0.0),
                   bottomRight: Radius.circular(0.0),
@@ -368,10 +454,335 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                     right: lang=="ar"?16:10.0, left:lang=="ar"?10.0:16.0, top: 5.0, bottom: 16.0),
                 child: Container(width: size.width,height: 100,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.max,
                     children: <Widget>[
+
+                      //---------------------------------back------------------
+                      Container(
+                        height: 45,
+                        width: 45,
+                        decoration: BoxDecoration(
+                          color: widget.theme=="light"?Colors.white:Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.circular(10.0),
+                          boxShadow: [
+                            BoxShadow(
+                              offset: Offset(0, 0.0),
+                              blurRadius: 5.0,
+                              spreadRadius: 1.0,
+                              color: Colors.black.withOpacity(0.1),
+                            ),
+                          ],
+
+                        ),
+
+                        child:
+                        IconButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          icon:Icon(Icons.arrow_back,color:Theme.of(context).primaryColor ,),
+                          // Image.asset(widget.theme=="light"?
+                          // 'assets/applicationIcons/Iconly-Curved-Category.png' : 'assets/applicationIcons/dashbord.png',
+
+
+                        ),
+
+
+                      ),
+                      currentUser == null
+                          ?  Container(
+                        height: 45,
+                        width: 45,
+                        decoration: BoxDecoration(
+                          color: widget.theme=="light"?Colors.white:Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.circular(10.0),
+                          boxShadow: [
+                            BoxShadow(
+                              offset: Offset(0, 0.0),
+                              blurRadius: 5.0,
+                              spreadRadius: 1.0,
+                              color: Colors.black.withOpacity(0.1),
+                            ),
+                          ],
+
+                        ),
+
+                        child: InkWell(
+                          splashColor: Colors.white,
+                          onTap: () {
+                            showNoNotifSnack(
+                                getTranslated(context, "noNotification"));
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                            ),
+                            width: 20.0,
+                            height: 20.0,
+                            child: Image.asset(
+                              theme == "light"
+                                  ? 'assets/applicationIcons/darkNotification.png'
+                                  : 'assets/applicationIcons/darkNotification.png',
+                            ),
+                          ),
+                        ),
+
+                      )
+                          : BlocBuilder(
+                        bloc: notificationBloc,
+                        buildWhen: (previous, current) {
+                          if (current
+                          is GetAllNotificationsInProgressState ||
+                              current is GetAllNotificationsFailedState ||
+                              current
+                              is GetAllNotificationsCompletedState ||
+                              current is GetNotificationsUpdateState) {
+                            return true;
+                          }
+                          return false;
+                        },
+                        builder: (context, state) {
+                          print("nnnnnn");
+                          print(state);
+                          if (state is GetAllNotificationsInProgressState) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(50.0),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  splashColor:
+                                  Colors.white.withOpacity(0.5),
+                                  onTap: () {
+                                    print('Notificationllllllll');
+                                    showNoNotifSnack(getTranslated(
+                                        context, "noNotification"));
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                    ),
+                                    width: 25.0,
+                                    height: 25.0,
+                                    child: Image.asset(
+                                      theme == "light"
+                                          ? 'assets/applicationIcons/lightNotification.png'
+                                          : 'assets/applicationIcons/darkNotification.png',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          if (state is GetNotificationsUpdateState) {
+                            if (state.userNotification != null) {
+                              if (state.userNotification.notifications
+                                  .length ==
+                                  0) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      splashColor:
+                                      Colors.white.withOpacity(0.5),
+                                      onTap: () {
+                                        showNoNotifSnack(getTranslated(context, "noNotification"));
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                        ),
+                                        width: 25.0,
+                                        height: 25.0,
+                                        child: Image.asset(
+                                          theme == "light"
+                                              ? 'assets/applicationIcons/darkNotification.png'
+                                              : 'assets/applicationIcons/darkNotification.png',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              userNotification = state.userNotification;
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: <Widget>[
+                                  Positioned(
+                                    child: ClipRRect(
+                                      borderRadius:
+                                      BorderRadius.circular(50.0),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          splashColor:
+                                          Colors.white.withOpacity(0.5),
+                                          onTap: () {
+                                            if (userNotification.unread) {
+                                              notificationBloc.add(
+                                                NotificationMarkReadEvent(
+                                                    currentUser.uid),
+                                              );
+                                            }
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    NotificationScreen(
+                                                      userNotification:
+                                                      userNotification,
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.transparent,
+                                            ),
+                                            width: 25.0,
+                                            height: 25.0,
+                                            child: Image.asset(
+                                              theme == "light"
+                                                  ? 'assets/applicationIcons/darkNotification.png'
+                                                  : 'assets/applicationIcons/darkNotification.png',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  userNotification.unread
+                                      ? Positioned(
+                                    left: 2.0,
+                                    top: 2.0,
+                                    child: Container(
+                                      height: 10,
+                                      width: 10,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.amber,
+                                      ),
+                                    ),
+                                  )
+                                      : SizedBox(),
+                                ],
+                              );
+                            }
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(50.0),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  splashColor:
+                                  Colors.white.withOpacity(0.5),
+                                  onTap: () {
+                                    print('Notificationgggggg');
+                                    showNoNotifSnack(getTranslated(
+                                        context, "noNotification"));
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                    ),
+                                    width: 25.0,
+                                    height: 25.0,
+                                    child: Image.asset(
+                                      theme == "light"
+                                          ? 'assets/applicationIcons/darkNotification.png'
+                                          : 'assets/applicationIcons/darkNotification.png',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(50.0),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                splashColor: Colors.white.withOpacity(0.5),
+                                onTap: () {
+                                  print('Notification');
+                                  showNoNotifSnack(getTranslated(
+                                      context, "noNotification"));
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                  ),
+                                  width: 25.0,
+                                  height: 25.0,
+                                  child: Image.asset(
+                                    theme == "light"
+                                        ? 'assets/applicationIcons/darkNotification.png'
+                                        : 'assets/applicationIcons/darkNotification.png',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+//-----------------------search------------------------
+                      Container(
+                        height: 45.0,
+                        width: size.width*.55,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 1.0, vertical: 0.0),
+                        decoration: BoxDecoration(
+                          color: widget.theme=="light"?Colors.white:Color(0xff3f3f3f),
+                          borderRadius: BorderRadius.circular(10.0),
+                          boxShadow: [
+                            BoxShadow(
+                              offset: Offset(0, 0.0),
+                              blurRadius: 5.0,
+                              spreadRadius: 1.0,
+                              color: Colors.black.withOpacity(0.1),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          onTap: (){
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SearchScreen(loggedUser:user,), ),  );
+                          },
+                          keyboardType: TextInputType.text,
+                          controller: searchController,
+                          textInputAction: TextInputAction.search,
+                          enableInteractiveSelection: true,
+                          readOnly:true,
+                          style: GoogleFonts.cairo(
+                            fontSize: 14.5,
+                            color: Colors.black87,
+                            letterSpacing: 0.5,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          decoration: InputDecoration(
+                            contentPadding:
+                            EdgeInsets.symmetric(horizontal: 5.0, vertical: 8.0),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Theme.of(context).primaryColor,
+                              size: 25.0,
+                            ),
+                            border: InputBorder.none,
+                            hintText: getTranslated(context, "search"),
+                            hintStyle: GoogleFonts.cairo(
+                              fontSize: 14.5,
+                              color: Theme.of(context).primaryColor,
+                              letterSpacing: 0.5,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ),
                       InkWell(
                         splashColor:
                         Colors.white.withOpacity(0.5),
@@ -425,76 +836,343 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                         ),
                       ),
 
-                      Container(
-                        height: 38.0,
-                        width: size.width*.55,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 1.0, vertical: 0.0),
-                        decoration: BoxDecoration(
-                          color: widget.theme=="light"?Colors.white:Color(0xff3f3f3f),
-                          borderRadius: BorderRadius.circular(20.0),
-                        ),
-                        child: TextField(
-                          onTap: (){
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SearchScreen(loggedUser:user,), ),  );
-                          },
-                          keyboardType: TextInputType.text,
-                          controller: searchController,
-                          textInputAction: TextInputAction.search,
-                          enableInteractiveSelection: true,
-                          readOnly:true,
-                          style: GoogleFonts.cairo(
-                            fontSize: 14.5,
-                            color: Colors.black87,
-                            letterSpacing: 0.5,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          decoration: InputDecoration(
-                            contentPadding:
-                            EdgeInsets.symmetric(horizontal: 5.0, vertical: 8.0),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Theme.of(context).primaryColor,
-                              size: 25.0,
-                            ),
-                            border: InputBorder.none,
-                            //hintText: getTranslated(context, "search"),
-                            hintStyle: GoogleFonts.cairo(
-                              fontSize: 14.5,
-                              color: Theme.of(context).primaryColor,
-                              letterSpacing: 0.5,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.asset(widget.theme=="light"?
-                        'assets/applicationIcons/Iconly-Curved-Category.png' : 'assets/applicationIcons/dashbord.png',
-                          width: 30,
-                          height: 30,
-                        ),
-                      ),
-
-
-
-
                     ],
                   ),
                 ),
               ),
             ),
+            Divider(
+              height: 2.0,
+              color: Colors.grey,
+            ),
+            SizedBox(
+              height: 2.0,
+            ),
+
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(10.0),
+                padding: const EdgeInsets.all(2.0),
                 child: ListView(physics:  AlwaysScrollableScrollPhysics(),children: [
-                  SizedBox(height: 25,),
+                  Center(
+                    child:  Container(width: size.width,height: 200,
+                      padding: const EdgeInsets.all(5),
+
+                      child:
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 1),
+                            child: Stack(
+                              children: <Widget>[
+                                Padding(
+                                  padding: const EdgeInsets.all(2.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Column(
+                                        children: [
+                                          Container(
+                                            height: 40,
+                                            width: 40,
+                                            decoration: BoxDecoration(
+                                              color:Colors.green.withOpacity(0.5),
+                                              borderRadius: BorderRadius.circular(10.0),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  offset: Offset(0, 0.0),
+                                                  blurRadius: 5.0,
+                                                  spreadRadius: 1.0,
+                                                  color: Colors.black.withOpacity(0.1),
+                                                ),
+                                              ],
+
+                                            ),
+
+                                            child:
+
+                                              Image.asset(
+                                                theme == "light"
+                                                    ? 'assets/applicationIcons/blackCall.png'
+                                                    : 'assets/applicationIcons/blackCall.png',
+                                                width: 12,
+                                                height: 12,
+                                              ),
+
+
+                                          ),
+                                          Row(
+                                            children: [
+
+                                              Image.asset(
+                                                theme == "light"
+                                                    ? 'assets/applicationIcons/greenCall.png'
+                                                    : 'assets/applicationIcons/blackCall.png',
+                                                width: 12,
+                                                height: 12,
+                                              ),
+                                              Text(
+                                                widget.consultant.ordersNumbers == null
+                                                    ? {'+' + '0'}
+                                                    : widget.consultant.ordersNumbers < 100
+                                                    ? '+'+widget.consultant.ordersNumbers.toString()
+                                                    : widget.consultant.ordersNumbers < 1000
+                                                    ? "+100"
+                                                    : "+1000",
+                                                textAlign: TextAlign.start,
+                                                overflow: TextOverflow.ellipsis,
+                                                softWrap: false,
+                                                maxLines: 1,
+                                                style: GoogleFonts.cairo(
+                                                  color: theme == "light"
+                                                      ? Colors.black
+                                                      : Colors.white,
+                                                  fontSize: 12.0,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                        ],
+                                      ),
+                                      SizedBox(
+                                        width: 20.0,
+                                      ),
+                                      DottedBorder(
+                                        color: AppColors.yellow,
+                                        dashPattern: [8, 4],
+                                        borderType: BorderType.Circle,
+                                        radius: Radius.circular(50),
+                                        padding: EdgeInsets.all(6),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                                          child: Container(
+
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: Colors.grey, width: 1),
+                                              shape: BoxShape.circle,
+                                              color: Colors.white,
+                                            ),
+                                            child:  widget.consultant.photoUrl.isEmpty
+                                                ? Image.asset(
+                                              'assets/applicationIcons/whiteLogo.png',
+                                              width: 60,
+                                              height: 60,
+                                            )
+                                            //Icon( Icons.person,color:Colors.black,size: 50.0, )
+                                                : ClipRRect(
+                                              borderRadius: BorderRadius.circular(100.0),
+                                              child: FadeInImage.assetNetwork(
+                                                placeholder: 'assets/images/load.gif',
+                                                placeholderScale: 0.5,
+                                                imageErrorBuilder:
+                                                    (context, error, stackTrace) =>
+                                                    Image.asset(
+                                                      'assets/applicationIcons/whiteLogo.png',
+                                                      width: 60,
+                                                      height: 60,
+                                                    ),
+                                                image:  widget.consultant.photoUrl,
+                                                fit: BoxFit.cover,
+                                                fadeInDuration:
+                                                Duration(milliseconds: 250),
+                                                fadeInCurve: Curves.easeInOut,
+                                                fadeOutDuration:
+                                                Duration(milliseconds: 150),
+                                                fadeOutCurve: Curves.easeInOut,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 20.0,
+                                      ),
+                                      Column(
+                                        children: [
+                                          Container(
+                                            height: 40,
+                                            width: 40,
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context).primaryColor.withOpacity(0.5),
+                                              borderRadius: BorderRadius.circular(10.0),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  offset: Offset(0, 0.0),
+                                                  blurRadius: 5.0,
+                                                  spreadRadius: 1.0,
+                                                  color: Colors.black.withOpacity(0.1),
+                                                ),
+                                              ],
+
+                                            ),
+
+                                            child:
+                                            IconButton(
+                                              onPressed: () {
+
+                                              },
+                                              icon:Icon(Icons.photo_camera_front,color :Colors.black,),
+                                              // Image.asset(widget.theme=="light"?
+                                              // 'assets/applicationIcons/Iconly-Curved-Category.png' : 'assets/applicationIcons/dashbord.png',
+
+
+                                            ),
+
+
+                                          ),
+                                          Text(
+                                            widget.consultant.price + "\$",
+                                            textAlign: TextAlign.start,
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                            style: GoogleFonts.cairo(
+                                              color:  Colors.black,
+                                              fontSize: 12.0,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                )
+
+                              ],
+                            ),
+                          ),
+//-----------------------rate------------------
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                widget.consultant.name,
+                                textAlign: TextAlign.start,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: GoogleFonts.cairo(
+                                  color: theme == "light"
+                                      ? Theme.of(context).primaryColor
+                                      : Colors.white,
+                                  fontSize: 12.0,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              RatingBar.builder(
+                                initialRating:
+                                 widget.consultant.rating == null ? 0 :  widget.consultant.rating,
+                                minRating: 1,
+                                direction: Axis.horizontal,
+                                allowHalfRating: true,
+                                itemCount: 5,
+                                itemSize: 20,
+                                itemBuilder: (context, _) => Icon(
+                                  Icons.star,
+                                  color: AppColors.yellow,
+                                ),
+                                onRatingUpdate: (rating) {
+                                  rating= widget.consultant.rating;
+                                },
+                              ),
+                              // Row(mainAxisAlignment: MainAxisAlignment.center,
+                              //   children: [
+                              //     Icon(
+                              //       Icons.star,
+                              //       color: AppColors.yellow,
+                              //     ),
+                              //     Text(
+                              //        widget.consultant.rating==null?"0":  widget.consultant.rating.toStringAsFixed(1),
+                              //       textAlign: TextAlign.start,
+                              //       overflow: TextOverflow.ellipsis,
+                              //       softWrap: false,
+                              //       maxLines: 1,
+                              //       style: GoogleFonts.cairo(
+                              //         color: theme=="light"?Colors.white:Colors.black,
+                              //         fontSize: 11.0,
+                              //         fontWeight: FontWeight.bold,
+                              //         letterSpacing: 0.3,
+                              //       ),
+                              //     ),
+                              //   ],
+                              // ),
+
+                              Icon(
+                                Icons.mic_none,
+                                size: 20,
+                                color: theme=="light"?AppColors.pink:AppColors.black,
+                              ),
+                              Row(mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    height: 25,
+                                    width: size.width * .15,
+                                    padding: const EdgeInsets.all(0),
+                                    decoration: BoxDecoration(
+                                      color: theme == "light"
+                                          ? AppColors.lightGrey
+                                          : AppColors.pink,
+                                      borderRadius: BorderRadius.circular(20.0),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        getTranslated(context, "arabic"),
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.cairo(
+                                          color:  theme == "light"
+                                              ? AppColors.grey//Theme.of(context).primaryColor
+                                              : Colors.black,
+                                          fontSize: 11.0,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 20.0,
+                                  ),
+                                  Container(
+                                    height: 25,
+                                    width: size.width * .15,
+                                    padding: const EdgeInsets.all(0),
+                                    decoration: BoxDecoration(
+                                      color: theme == "light"
+                                          ? AppColors.lightGrey
+                                          : AppColors.pink,
+                                      borderRadius: BorderRadius.circular(20.0),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        getTranslated(context, "english"),
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.cairo(
+                                          color:  theme == "light"
+                                              ? AppColors.grey//Theme.of(context).primaryColor
+                                              : Colors.black,
+                                          fontSize: 11.0,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                            ],
+                          ),
+
+
+                        ],
+                      ),
+
+
+                    ),
+                  ),
+                  SizedBox(height: 5,),
                   Center(
                     child: Container(width: size.width*.9,
                       decoration: BoxDecoration(
@@ -509,68 +1187,123 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                             color: Colors.black.withOpacity(0.5),
                           ),
                         ],
-                      ),child:Column(
-                        children: [
-                          Container(height: 50,
-                            decoration: BoxDecoration(
-                              color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
-                              borderRadius: BorderRadius.circular(25.0),
+                      ),child:Padding(
+                        padding: const EdgeInsets.only(right: 10.0,left: 10.0),
+                        child: Column(
 
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 10,right: 10),
-                              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(5.0),
+                              child: Container(
+
+                                height: 50,
+                                width: size.width*.4,
+                                decoration: BoxDecoration(
+                                  color: widget.theme=="light"?Colors.white:Theme.of(context).primaryColor,
+                                  borderRadius: BorderRadius.circular(25.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      offset: Offset(0, 0.0),
+                                      blurRadius: 5.0,
+                                      spreadRadius: 1.0,
+                                      color: Colors.black.withOpacity(0.1),
+                                    ),
+                                  ],
+
+                                ),
+
+                                child:
+                                Center(
+                                  child: Text(
                                     getTranslated(context, "bio"),
                                     style: GoogleFonts.cairo(
-                                      color: widget.theme=="light"?Colors.white:Colors.white,
+                                      color:  widget.theme=="light"?Theme.of(context).primaryColor:Colors.white,
                                       fontSize: 15.0,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 0.3,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          InkWell(onTap: (){
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>BioDetailsScreen(consult:widget.consultant),
-                              ),
-                            );
-                          },
-                            child: Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: RichText(
-                                text: TextSpan(
-                                  text: widget.consultant.bio.length>165?widget.consultant.bio.substring(0,165):widget.consultant.bio,
-                                  style: GoogleFonts.cairo(
-                                    fontSize: 12.0,
-                                    color:AppColors.black,
-                                  ),
-                                  children: <TextSpan>[
-                                    TextSpan(
-                                        text: "  "+getTranslated(context, "more"),
-                                        style: GoogleFonts.cairo(
-                                          color: AppColors.brown,
-                                          fontSize: 11.0,
-                                          fontWeight: FontWeight.bold,)),
-                                  ],
                                 ),
-                              )
 
+
+
+                              ),
                             ),
-                          ),
-                        ],
+                            Padding(
+                              padding: const EdgeInsets.all(5.0),
+                              child: InkWell(onTap: (){
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>BioDetailsScreen(consult:widget.consultant),
+                                  ),
+                                );
+                              },
+
+
+                                  child: Text(
+                                    widget.consultant.bio.length>120?(widget.consultant.bio.substring(0,120)):widget.consultant.bio,
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 12.0,
+                                      color:AppColors.black,
+                                    ),
+
+                                  )
+
+                              ),
+                            ),
+                            Visibility(
+                              visible: widget.consultant.bio.length>120,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Align(
+                                  alignment: Alignment.bottomLeft,
+                                  child: Container(height: 35,width: size.width*.35,
+
+
+                                    decoration: BoxDecoration(
+                                      color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
+                                      borderRadius: BorderRadius.circular(35.0),
+
+                                    ),
+                                    child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+
+                                        children:[
+                                          Text(
+                                            getTranslated(context, "readMore"),
+                                            style: GoogleFonts.cairo(
+                                              color: widget.theme=="light"?Colors.white:Colors.white,
+                                              fontSize: 15.0,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                          IconButton(
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => ReviewScreens(consult:widget.consultant ,reviewLength:reviewLength), ),  );
+                                            },
+                                            icon: Icon(
+                                              Icons.arrow_circle_left_outlined,
+                                              color:  widget.theme=="light"?Colors.white:Colors.white,
+                                            ),
+                                          ),
+                                        ]
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
                       ),),
                   ),
                   SizedBox(height: 20,),
                   Center(
-                      child:  Container(height: 250,width: size.width*.9,
+                      child:  Container(height: 300,width: size.width*.9,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(25.0),
@@ -584,43 +1317,44 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                             ),
                           ],
                         ),
-                        child: Column(mainAxisAlignment: MainAxisAlignment.start,
+                        child:
+                        Column(mainAxisAlignment: MainAxisAlignment.start,
+
                           children: [
-                            Container(height: 50,
-                              decoration: BoxDecoration(
-                                color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
-                                borderRadius: BorderRadius.circular(25.0),
-
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 10,right: 10),
-                                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      getTranslated(context, "Reviews"),
-                                      style: GoogleFonts.cairo(
-                                        color:  widget.theme=="light"?Colors.white:Colors.white,
-                                        fontSize: 15.0,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.3,
-                                      ),
+                            Padding(
+                              padding: const EdgeInsets.all(5.0),
+                              child: Container(
+                                height: 50,
+                                width: size.width*.4,
+                                decoration: BoxDecoration(
+                                  color: widget.theme=="light"?Colors.white:Theme.of(context).primaryColor,
+                                  borderRadius: BorderRadius.circular(25.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      offset: Offset(0, 0.0),
+                                      blurRadius: 5.0,
+                                      spreadRadius: 1.0,
+                                      color: Colors.black.withOpacity(0.1),
                                     ),
-                                    IconButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => ReviewScreens(consult:widget.consultant ,reviewLength:reviewLength), ),  );
-                                      },
-                                      icon: Icon(
-                                        Icons.arrow_forward,
-                                        color:  widget.theme=="light"?Colors.white:Colors.white,
-                                      ),
-                                    ),
-
                                   ],
+
                                 ),
+
+                                child:
+                                Center(
+                                  child: Text(
+                                    getTranslated(context, "Reviews"),
+                                    style: GoogleFonts.cairo(
+                                      color:  widget.theme=="light"?Theme.of(context).primaryColor:Colors.white,
+                                      fontSize: 15.0,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+
+
+
                               ),
                             ),
                             loadReviews?Center(
@@ -635,7 +1369,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                                   crossAxisAlignment:
                                   CrossAxisAlignment.center,
                                   children: <Widget>[
-                                   /* Image.asset(
+                                    /* Image.asset(
                                       'assets/images/cancel_order.png',
                                       width: size.width * 0.6,
                                       height: 120,
@@ -702,21 +1436,24 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                                               ),
                                             ),
                                           ),
-                                          Padding(
-                                            padding: const EdgeInsets.only(left: 2,right: 2),
-                                            child: Container(width: size.width*.5,
-                                              child: Column(mainAxisAlignment:MainAxisAlignment.start,crossAxisAlignment:CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    reviews[index].name,
-                                                    overflow:TextOverflow.ellipsis ,
-                                                    style: GoogleFonts.cairo(
-                                                      color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
-                                                      fontSize: 13.0,
-                                                      fontWeight: FontWeight.bold,
-                                                      letterSpacing: 0.5,
-                                                    ),),
-                                                  Text(
+
+                                          Container(width: size.width*.5,
+
+                                            padding:  EdgeInsets.only(left: 3,right: 3),
+                                            child: Column(mainAxisAlignment:MainAxisAlignment.start,crossAxisAlignment:CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  reviews[index].name,
+                                                  overflow:TextOverflow.ellipsis ,
+                                                  style: GoogleFonts.cairo(
+                                                    color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
+                                                    fontSize: 13.0,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 0.5,
+                                                  ),),
+                                                Expanded(
+                                                  flex: 3,
+                                                  child: Text(
                                                     reviews[index].review,
                                                     maxLines: 2,
                                                     overflow:TextOverflow.ellipsis ,
@@ -726,9 +1463,10 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                                                       fontWeight: FontWeight.normal,
                                                       letterSpacing: 0.5,
                                                     ),),
-                                                ],),
-                                            ),
+                                                ),
+                                              ],),
                                           ),
+
                                           Row(mainAxisAlignment: MainAxisAlignment.end,
                                             children: [
                                               Icon(
@@ -757,22 +1495,76 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                               },
                             ):SizedBox(),
 
+
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Align(
+                                alignment: Alignment.bottomLeft,
+                                child: Container(height: 35,width: size.width*.35,
+
+                                  decoration: BoxDecoration(
+                                    color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
+                                    borderRadius: BorderRadius.circular(35.0),
+
+                                  ),
+                                  child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+
+                                      children:[
+                                        Text(
+                                          getTranslated(context, "readMore"),
+                                          style: GoogleFonts.cairo(
+                                            color: widget.theme=="light"?Colors.white:Colors.white,
+                                            fontSize: 15.0,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => ReviewScreens(consult:widget.consultant ,reviewLength:reviewLength), ),  );
+                                          },
+                                          icon: Icon(
+                                            Icons.arrow_circle_left_outlined,
+                                            color:  widget.theme=="light"?Colors.white:Colors.white,
+                                          ),
+                                        ),
+                                      ]
+                                  ),
+                                ),
+                              ),
+                            )
+
+
+
+
                           ],
                         ),
+
                       )),
                   SizedBox(height: 20,),
                   Center(
                     child: Container(height: 35,width: size.width*.5,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
+                        color: widget.theme=="light"?Colors.white:Colors.black,
                         borderRadius: BorderRadius.circular(35.0),
-
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(0, 0.0),
+                            blurRadius: 5.0,
+                            spreadRadius: 1.0,
+                            color: Colors.black.withOpacity(0.5),
+                          ),
+                        ],
                       ),child:  Center(
                         child: Text(
                           getTranslated(context, "timeOfWork"),
                           style: GoogleFonts.cairo(
-                            color: Colors.white,
+                            color: Theme.of(context).primaryColor,
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -783,16 +1575,19 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                   SizedBox(height: 20,),
                   Row(mainAxisAlignment:MainAxisAlignment.start,crossAxisAlignment:CrossAxisAlignment.center,children: [
                     //Icon( Icons.calendar_today_outlined,size:30,  color: Theme.of(context).primaryColor,),
-                    Image.asset(widget.theme=="light"?
-                    'assets/applicationIcons/Iconly-Two-tone-Calendar-1.png':'assets/applicationIcons/Iconly-Two-tone-Calendar.png',
-                      width: 30,
-                      height: 30,
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Image.asset(widget.theme=="light"?
+                      'assets/applicationIcons/Iconly-Two-tone-Calendar-1.png':'assets/applicationIcons/Iconly-Two-tone-Calendar.png',
+                        width: 30,
+                        height: 30,
+                      ),
                     ),
                     SizedBox(width: 5,),
                     Container(height: 70,width: size.width*.8,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: AppColors.lightGrey,
+                        color: AppColors.lightGrey.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(30.0),
 
                       ),child:  Center(
@@ -812,16 +1607,19 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                   SizedBox(height: 20,),
                   Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,crossAxisAlignment:CrossAxisAlignment.center,children: [
                     // Icon( Icons.update,size:30,  color: Theme.of(context).primaryColor,),
-                    Image.asset(widget.theme=="light"?
-                    'assets/applicationIcons/Iconly-Two-tone-TimeCircle.png':'assets/applicationIcons/whiteTime.png',
-                      width: 30,
-                      height: 30,
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Image.asset(widget.theme=="light"?
+                      'assets/applicationIcons/Iconly-Two-tone-TimeCircle.png':'assets/applicationIcons/whiteTime.png',
+                        width: 30,
+                        height: 30,
+                      ),
                     ),
                     SizedBox(width: 5,),
                     Container(height: 35,width: size.width*.3,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: AppColors.lightGrey,
+                        color: AppColors.lightGrey.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(30.0),
 
                       ),child:  Center(
@@ -840,7 +1638,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                     Container(height: 35,width: size.width*.3,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: AppColors.lightGrey,
+                        color: AppColors.lightGrey.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(30.0),
 
                       ),child:  Center(
@@ -863,14 +1661,22 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                     child: Container(height: 35,width: size.width*.5,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: widget.theme=="light"?Theme.of(context).primaryColor:Colors.black,
+                        color: widget.theme=="light"?Colors.white:Colors.black,
                         borderRadius: BorderRadius.circular(35.0),
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(0, 0.0),
+                            blurRadius: 5.0,
+                            spreadRadius: 1.0,
+                            color: Colors.black.withOpacity(0.5),
+                          ),
+                        ],
 
                       ),child:  Center(
                         child: Text(
-                          getTranslated(context, "Packages"),
+                          getTranslated(context, "allPackages"),
                           style: GoogleFonts.cairo(
-                            color: Colors.white,
+                            color:Theme.of(context).primaryColor,
                             fontSize: 13.0,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -944,10 +1750,10 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                         child: Container(height: 50,width: size.width*.8,
                             padding: const EdgeInsets.only(left: 10,right: 10),
                             decoration: BoxDecoration(
-                              color: index==-1?Theme.of(context).primaryColor:AppColors.lightGrey,
+                              color: index==-1?Theme.of(context).primaryColor:AppColors.white,
                               borderRadius: BorderRadius.circular(25.0),
                               border: Border.all(color: _selectedIndex != null && _selectedIndex == index
-                                  ?AppColors.brown
+                                  ?Theme.of(context).primaryColor
                                   : AppColors.lightGrey,width: 2),
 
                             ),child: Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children: [
@@ -961,22 +1767,15 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                                   ),),
                               ),
 
-                              Container(height: 40,width: size.width*.3,
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor,
-                                  borderRadius: BorderRadius.circular(25.0),
-
-                                ),child:Center(
-                                  child: Text(
+                              Text(
                                     packages[index].price.toString()+"\$",
                                     style: GoogleFonts.cairo(
-                                      color:  widget.theme=="light"?Colors.white:Colors.black,
+                                      color:  widget.theme=="light"?Theme.of(context).primaryColor:Theme.of(context).primaryColor,
                                       fontSize: 13.0,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 0.5,
                                     ),),
-                                ),)
+
                             ],)
                         ),
                       );
@@ -996,8 +1795,16 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                           children: [
                             Container(height: 35,width: size.width*.7,
                               decoration: BoxDecoration(
-                                color: widget.theme=="light"?Colors.black.withOpacity(0.1):Colors.white,
+                                color: widget.theme=="light"?Colors.white:Colors.white,
                                 borderRadius: BorderRadius.circular(15.0),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    spreadRadius: 1.0,
+                                    blurRadius: 5.0,
+                                    offset: Offset(0.0, 2.0),
+                                  )
+                                ],
                               ),
                               child: TextFormField(
                                 controller: controller,
@@ -1019,7 +1826,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                                   hintText: getTranslated(context,"enterPromoCode"),
                                   hintStyle: GoogleFonts.cairo(
                                     fontSize: 14.0,
-                                    color: Colors.black54,
+                                    color:  Theme.of(context).primaryColor,
                                     letterSpacing: 0.5,
                                     fontWeight: FontWeight.w400,
                                   ),
@@ -1048,25 +1855,25 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                                 },
                               ),
                             ),
-                            Icon(
-                              Icons.check_circle,
-                              color:valid?Colors.green:Colors.grey,
-                              size: 30.0,
-                            ),
+                            // Icon(
+                            //   Icons.check_circle,
+                            //   color:valid?Colors.green:Colors.grey,
+                            //   size: 30.0,
+                            // ),
                           ],
                         ),
                         Text(
-                            getTranslated(context, "proText")+ discount.toString()+"%",
-                            maxLines: 3,
-                            overflow:TextOverflow.ellipsis ,
-                            softWrap: true,
-                            style: GoogleFonts.cairo(
-                              fontSize: 14.0,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.3,
-                              color: Colors.grey,
-                            ),
+                          getTranslated(context, "proText"),//+ discount.toString()+"%"
+                          maxLines: 3,
+                          overflow:TextOverflow.ellipsis ,
+                          softWrap: true,
+                          style: GoogleFonts.cairo(
+                            fontSize: 14.0,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                            color: Theme.of(context).primaryColor,
                           ),
+                        ),
                         SizedBox(height: 20,),
                         (user!=null&&currentNumber!=0)?Container(
                           height: 35,
@@ -1129,23 +1936,23 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                                 }
 
                               }
-                             else if (widget.consultant.consultType=="perfect"||widget.consultant.consultType=="jeras")
-                                {
-                                  QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-                                      .collection(Paths.appAppointments)
-                                      .where( 'orderId', isEqualTo: order.orderId,)
-                                      .get();
-                                  if(querySnapshot!=null&&querySnapshot.docs.length>0)
-                                    showSnakbar(getTranslated(context,'stillOpen'),true);
-                                  else
-                                    showConsultAppointmentList(size);
-                                }
+                              else if (widget.consultant.consultType=="perfect"||widget.consultant.consultType=="jeras")
+                              {
+                                QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+                                    .collection(Paths.appAppointments)
+                                    .where( 'orderId', isEqualTo: order.orderId,)
+                                    .get();
+                                if(querySnapshot!=null&&querySnapshot.docs.length>0)
+                                  showSnakbar(getTranslated(context,'stillOpen'),true);
+                                else
+                                  showConsultAppointmentList(size);
+                              }
                               else
                                 showConsultAppointmentList(size);
 
 
                             },
-                            color:AppColors.brown,// Theme.of(context).primaryColor,
+                            color:Theme.of(context).primaryColor,// Theme.of(context).primaryColor,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25.0),
                             ),
@@ -1174,221 +1981,8 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
 
           ],
         ),
-        Positioned(
-          right: 0.0,
-          top: (size.height*.18),//140.0,
-          left: 0,
-          child: Center(
-            child:  Container(width: size.width*.9,height: 90,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    offset: Offset(0, 0.0),
-                    blurRadius: 5.0,
-                    spreadRadius: 2.0,
-                    color: Colors.black.withOpacity(0.2),
-                  ),
-                ],
-                border: Border.all(color: Colors.white,width: 1),
-                color: Theme.of(context).primaryColor,
-                borderRadius: BorderRadius.circular(20.0),
-              ),
-              child: Column(
-                children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 1),
-                        child: Stack(
-                          children: <Widget>[
-                            Container(
-                              height: 60,
-                              width: 60,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.white,width: 3),
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                              ),
-                              child: widget.consultant.photoUrl.isEmpty ?
-                                  Image.asset('assets/applicationIcons/whiteLogo.png',width: 60,height: 60,)
-                                  :ClipRRect(
-                                borderRadius: BorderRadius.circular(100.0),
-                                child: FadeInImage.assetNetwork(
-                                  placeholder:
-                                  'assets/applicationIcons/whiteLogo.png',
-                                  placeholderScale: 0.5,
-                                  imageErrorBuilder:(context, error, stackTrace) => Image.asset('assets/applicationIcons/whiteLogo.png',width: 60,height: 60,),
-                                  image: widget.consultant.photoUrl,
-                                  fit: BoxFit.cover,
-                                  fadeInDuration:
-                                  Duration(milliseconds: 250),
-                                  fadeInCurve: Curves.easeInOut,
-                                  fadeOutDuration:
-                                  Duration(milliseconds: 150),
-                                  fadeOutCurve: Curves.easeInOut,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 5,
-                              left: 5.0,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(50.0),
-                                child: Material(
-                                  color: Theme.of(context).primaryColor,
-                                  child: InkWell(
-                                    splashColor: Colors.white.withOpacity(0.5),
-                                    onTap: () {
-
-                                    },
-                                    child: Container(
-                                      decoration:  BoxDecoration(
-                                        border: Border.all(color: Colors.white,width: 2),
-                                        shape: BoxShape.circle,
-                                        color: avaliable?AppColors.brown:Colors.red,
-                                      ),
-                                      width: 10.0,
-                                      height: 10.0,
-
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex:2,
-                        child: Column(mainAxisAlignment: MainAxisAlignment.start,crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              widget.consultant.name,
-                              textAlign: TextAlign.start,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: GoogleFonts.cairo(
-                                color:  widget.theme=="light"?Colors.white:Colors.black,
-                                fontSize: 12.0,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                            Row(mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 12,
-                                  color: widget.theme=="light"?AppColors.white:AppColors.black,
-                                ),
-                                Expanded(flex:2,
-                                  child: Text(
-                                      widget.consultant.location,
-                                    textAlign: TextAlign.start,
-                                    overflow: TextOverflow.ellipsis,
-                                    softWrap: false,
-                                    maxLines: 1,
-                                    style: GoogleFonts.cairo(
-                                      color:  widget.theme=="light"?Colors.white:Colors.black,
-                                      fontSize: 12.0,
-                                      // fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            Row( mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Row(mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.star,
-                                      size: 12,
-                                      color: AppColors.yellow,
-                                    ),
-                                    Text(
-                                      widget.consultant.rating==null?"0": widget.consultant.rating.toStringAsFixed(1),
-                                      textAlign: TextAlign.start,
-                                      overflow: TextOverflow.ellipsis,
-                                      softWrap: false,
-                                      maxLines: 1,
-                                      style: GoogleFonts.cairo(
-                                        color:  widget.theme=="light"?Colors.white:Colors.black,
-                                        fontSize: 12.0,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(width: 20,),
-                                Row(mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Image.asset(widget.theme=="light"?
-                                    'assets/applicationIcons/greenCall.png':'assets/applicationIcons/blackCall.png',
-                                      width: 12,
-                                      height: 12,
-                                    ),
 
 
-                                    Text(
-                                      widget.consultant.ordersNumbers==null?'+100':widget.consultant.ordersNumbers<100?widget.consultant.ordersNumbers.toString():widget.consultant.ordersNumbers<1000?"+100":"+1000",
-                                      textAlign: TextAlign.start,
-                                      overflow: TextOverflow.ellipsis,
-                                      softWrap: false,
-                                      maxLines: 1,
-                                      style: GoogleFonts.cairo(
-                                        color:  widget.theme=="light"?Colors.white:Colors.black,
-                                        fontSize: 12.0,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(5.0),
-                        child: Column(mainAxisAlignment: MainAxisAlignment.center,crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Text(
-                              widget.consultant.price+"\$",
-                              textAlign: TextAlign.start,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              style: GoogleFonts.cairo(
-                                color:  AppColors.white,
-                                fontSize: 12.0,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                            SizedBox(height: 20,),
-                            Image.asset('assets/applicationIcons/v-w.png',
-                              width: 15,
-                              height: 15,
-                            ),
-                          ],),
-                      ),
-                    ],
-                  ),
-
-                ],
-              ),
-
-
-            ),
-          ),
-        ),
         showPayView ? Positioned(
           child: Scaffold(
             body:IndexedStack(
@@ -1575,7 +2169,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
       var res = json.decode(responseBody);
       String url = res['transaction']['url'];
 
-     // Navigator.pop(context);
+      // Navigator.pop(context);
       setState(() {
         initialUrl=url;
         showPayView = true;
@@ -1593,7 +2187,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
   }
   payStatus(String chargeId) async {
     try{
-        print("payStatusqqqq");
+      print("payStatusqqqq");
       final uri = Uri.parse('https://api.tap.company/v2/charges/'+chargeId);
       final headers = {
         'Content-Type': 'application/json',
@@ -1695,7 +2289,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
         'orderNum': totalOrder+1,
         'totalEarn':totalEarned+double.parse(price.toString()),
       }, SetOptions(merge: true));
-      
+
       await FirebaseFirestore.instance.collection(Paths.orderAnalysisPath).doc(Uuid().v4()).set({
         'time': DateTime(dateOrder.year, dateOrder.month, dateOrder.day ).millisecondsSinceEpoch,
         'price':double.parse(price.toString()),
@@ -1833,21 +2427,21 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
 //========================
       todayAppointmentList.removeAt(selectedCard);
       if(widget.consultant.consultType=="glorified"||widget.consultant.consultType=="vocal")
-        {
-          await FirebaseFirestore.instance.collection(Paths.consultDaysPath).doc(time+"-"+widget.consultant.uid).set({
-            'todayAppointmentList': todayAppointmentList,
-          }, SetOptions(merge: true));
-        }
+      {
+        await FirebaseFirestore.instance.collection(Paths.consultDaysPath).doc(time+"-"+widget.consultant.uid).set({
+          'todayAppointmentList': todayAppointmentList,
+        }, SetOptions(merge: true));
+      }
       else
-        {
-         setState(() {
-           widget.consultant.consultOpenAppointmentDates==null? widget.consultant.consultOpenAppointmentDates=[date.hour.toString()+":"+date.minute.toString()]:
-           widget.consultant.consultOpenAppointmentDates.add(date.hour.toString()+":"+date.minute.toString());
-         });
-          await FirebaseFirestore.instance.collection(Paths.usersPath).doc(widget.consultant.uid).set({
-            'consultOpenAppointmentDates': widget.consultant.consultOpenAppointmentDates,
-          }, SetOptions(merge: true));
-        }
+      {
+        setState(() {
+          widget.consultant.consultOpenAppointmentDates==null? widget.consultant.consultOpenAppointmentDates=[date.hour.toString()+":"+date.minute.toString()]:
+          widget.consultant.consultOpenAppointmentDates.add(date.hour.toString()+":"+date.minute.toString());
+        });
+        await FirebaseFirestore.instance.collection(Paths.usersPath).doc(widget.consultant.uid).set({
+          'consultOpenAppointmentDates': widget.consultant.consultOpenAppointmentDates,
+        }, SetOptions(merge: true));
+      }
 
 
 
@@ -1860,8 +2454,8 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
           .of(context)
           .size, date);
     }catch(e)  {
-        String id = Uuid().v4();
-        await FirebaseFirestore.instance.collection(Paths.errorLogPath).doc(id).set({
+      String id = Uuid().v4();
+      await FirebaseFirestore.instance.collection(Paths.errorLogPath).doc(id).set({
         'timestamp': Timestamp.now(),
         'id': id,
         'seen': false,
@@ -1870,14 +2464,14 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
         'phone': widget.loggedUser == null ? " " : widget.loggedUser.phoneNumber,
         'screen': "ConsultantDetailsScreen",
         'function': "addAppointment",
-        });
-        setState(() {
+      });
+      setState(() {
         showPayView=false;
         load=false;
-        });
-        // Navigator.pop(context);
-        showSnakbar(getTranslated(context, "failed"),true);
-        }
+      });
+      // Navigator.pop(context);
+      showSnakbar(getTranslated(context, "failed"),true);
+    }
   }
   appointmentDialog(Size size,DateTime date) {
     // date=DateTime.parse(date.toString()).toLocal();
@@ -1974,7 +2568,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
       });
       //=========
       if(widget.consultant.consultType=="glorified"||widget.consultant.consultType=="vocal")
-      getDate();
+        getDate();
       else
         getAvaliableDates();
       //===========
@@ -2166,7 +2760,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                           setState(() {
                             selectedCard=index;
                           });
-                            addAppointment(DateTime.parse(todayAppointmentList[index]).toLocal());
+                          addAppointment(DateTime.parse(todayAppointmentList[index]).toLocal());
                         },
                         child: selectedCard == index?Center(child: CircularProgressIndicator()):Card(
                             color: AppColors.pink,
@@ -2181,19 +2775,19 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
                     }),
                   )
                       :Column(mainAxisAlignment: MainAxisAlignment.end,crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(height: 10,),
-                        loadDates?CircularProgressIndicator():SizedBox(),
-                        Text(
-                          dateText,
-                          style: GoogleFonts.cairo(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                            color: Colors.grey,
-                          ),
+                    children: [
+                      SizedBox(height: 10,),
+                      loadDates?CircularProgressIndicator():SizedBox(),
+                      Text(
+                        dateText,
+                        style: GoogleFonts.cairo(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                          color: Colors.grey,
                         ),
-                      ],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -2306,7 +2900,7 @@ class _ConsultantDetailsScreenState extends State<ConsultantDetailsScreen> {
             var value=from.add(Duration( minutes: start*lessonMintes)).toUtc().toString();
             var hmTime=from.add(Duration( minutes: start*lessonMintes)).toUtc().hour.toString()+":"+from.add(Duration( minutes: start*lessonMintes)).toUtc().minute.toString();
             if(consultOpenAppointmentDates.contains(hmTime)==false)
-               appointmentList.add(value);
+              appointmentList.add(value);
           }
         }
         setState(() {

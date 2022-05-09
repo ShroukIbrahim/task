@@ -585,7 +585,7 @@ class _HomePageState extends State<HomePage>
             width: size.width,
             height: size.height * .28,
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
+              color: Colors.white,
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(0.0),
                 bottomRight: Radius.circular(0.0),
@@ -598,76 +598,68 @@ class _HomePageState extends State<HomePage>
                   child: Column(mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Center(
-                        child: InkWell(
-                          splashColor: Colors.white.withOpacity(0.5),
-                          onTap: () {
-                           if (user != null && user.isDeveloper)
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      AllDevelopTechScreen(loggedUser: user),
-                                ),
-                              );
-                          else if (user != null && user.userType != "CONSULTANT")
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => UserAccountScreen(
-                                    user: user, firstLogged: false),
-                              ),
-                            );
-                          else {
-                            Navigator.pushNamed(context, '/Register_Type');
-                          }
-                        },
-                          child: Container(
-                            height: 70,
-                            width: 70,
+
+                      SizedBox(height: 5,),
+//-------AppBar---------------------
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+
+                        mainAxisSize: MainAxisSize.max,
+                        children: <Widget>[
+                          //----------DashboardButton----------
+                          Container(
+                            height: 45,
+                            width: 45,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                            ),
-                            child: userImage == null
-                                ? Image.asset(
-                              theme == "light"
-                                  ? 'assets/applicationIcons/whiteLogo.png'
-                                  : 'assets/applicationIcons/whiteLogo.png',
-                               width: 70,
-                                  height: 70,
-                            )
-                                : ClipRRect(
-                              borderRadius: BorderRadius.circular(100.0),
-                              child: FadeInImage.assetNetwork(
-                                placeholder: theme == "light"
-                                    ? 'assets/applicationIcons/whiteLogo.png'
-                                    : 'assets/applicationIcons/whiteLogo.png',
-                                //placeholderScale: 0.5,
-                                imageErrorBuilder:
-                                    (context, error, stackTrace) => Icon(
-                                  Icons.person,
-                                  color: Colors.black,
-                                  size: 50.0,
+                              color: theme=="light"?Colors.white:Theme.of(context).primaryColor,
+                              borderRadius: BorderRadius.circular(10.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  offset: Offset(0, 0.0),
+                                  blurRadius: 5.0,
+                                  spreadRadius: 1.0,
+                                  color: Colors.black.withOpacity(0.1),
                                 ),
-                                image: userImage,
-                                fit: BoxFit.cover,
-                                /* width: 50,
-                                        height: 50,*/
-                                fadeInDuration: Duration(milliseconds: 250),
-                                fadeInCurve: Curves.easeInOut,
-                                fadeOutDuration: Duration(milliseconds: 150),
-                                fadeOutCurve: Curves.easeInOut,
+                              ],
+
+                            ),
+                            child:
+                            IconButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DashboardScreen(),
+                                  ),
+                                );
+                              },
+                              icon: Image.asset(
+                                theme == "light"
+                                    ? 'assets/applicationIcons/dashbord.png'
+                                    : 'assets/applicationIcons/Iconly-Curved-Category.png',
+                                width: 30,
+                                height: 30,
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                      SizedBox(height: 5,),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.max,
-                        children: <Widget>[
+
+                          Container(
+                            height: 45,
+                            width: 45,
+                            decoration: BoxDecoration(
+                              color: theme=="light"?Colors.white:Theme.of(context).primaryColor,
+                              borderRadius: BorderRadius.circular(10.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  offset: Offset(0, 0.0),
+                                  blurRadius: 5.0,
+                                  spreadRadius: 1.0,
+                                  color: Colors.black.withOpacity(0.1),
+                                ),
+                              ],
+
+                            ),
+                            child:
                           currentUser == null
                               ? ClipRRect(
                             borderRadius: BorderRadius.circular(50.0),
@@ -683,12 +675,12 @@ class _HomePageState extends State<HomePage>
                                   decoration: BoxDecoration(
                                     color: Colors.transparent,
                                   ),
-                                  width: 25.0,
-                                  height: 25.0,
+                                  width: 20.0,
+                                  height: 20.0,
                                   child: Image.asset(
                                     theme == "light"
-                                        ? 'assets/applicationIcons/lightNotification.png'
-                                        : 'assets/applicationIcons/darkNotification.png',
+                                        ? 'assets/applicationIcons/darkNotification.png'
+                                    :'assets/applicationIcons/lightNotification.png',
                                   ),
                                 ),
                               ),
@@ -724,13 +716,12 @@ class _HomePageState extends State<HomePage>
                                         decoration: BoxDecoration(
                                           color: Colors.transparent,
                                         ),
-                                        width: 25.0,
-                                        height: 25.0,
+                                        width: 20.0,
+                                        height: 20.0,
                                         child: Image.asset(
                                           theme == "light"
-                                              ? 'assets/applicationIcons/lightNotification.png'
-                                              : 'assets/applicationIcons/darkNotification.png',
-                                        ),
+                                              ? 'assets/applicationIcons/darkNotification.png'
+                                              :'assets/applicationIcons/lightNotification.png',),
                                       ),
                                     ),
                                   ),
@@ -755,13 +746,12 @@ class _HomePageState extends State<HomePage>
                                             decoration: BoxDecoration(
                                               color: Colors.transparent,
                                             ),
-                                            width: 25.0,
-                                            height: 25.0,
+                                            width: 20.0,
+                                            height: 20.0,
                                             child: Image.asset(
                                               theme == "light"
-                                                  ? 'assets/applicationIcons/lightNotification.png'
-                                                  : 'assets/applicationIcons/darkNotification.png',
-                                            ),
+                                                  ? 'assets/applicationIcons/darkNotification.png'
+                                                  :'assets/applicationIcons/lightNotification.png', ),
                                           ),
                                         ),
                                       ),
@@ -802,13 +792,12 @@ class _HomePageState extends State<HomePage>
                                                 decoration: BoxDecoration(
                                                   color: Colors.transparent,
                                                 ),
-                                                width: 25.0,
-                                                height: 25.0,
+                                                width: 20.0,
+                                                height: 20.0,
                                                 child: Image.asset(
                                                   theme == "light"
-                                                      ? 'assets/applicationIcons/lightNotification.png'
-                                                      : 'assets/applicationIcons/darkNotification.png',
-                                                ),
+                                                      ? 'assets/applicationIcons/darkNotification.png'
+                                                      :'assets/applicationIcons/lightNotification.png', ),
                                               ),
                                             ),
                                           ),
@@ -885,85 +874,183 @@ class _HomePageState extends State<HomePage>
                               );
                             },
                           ),
-                          Center(
-                            child: Container(
-                              height: 35.0,
-                              width: size.width * .65,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 1.0, vertical: 0.0),
-                              decoration: BoxDecoration(
-                                color:
-                                theme == "light" ? Colors.white : Color(0xff3f3f3f),
-                                borderRadius: BorderRadius.circular(20.0),
+
+                          ),
+                          //-----------------------search------------------------
+                          Container(
+                            height: 45.0,
+                            width: size.width*.55,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 1.0, vertical: 0.0),
+                            decoration: BoxDecoration(
+                              color: theme=="light"?Colors.white:Color(0xff3f3f3f),
+                              borderRadius: BorderRadius.circular(10.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  offset: Offset(0, 0.0),
+                                  blurRadius: 5.0,
+                                  spreadRadius: 1.0,
+                                  color: Colors.black.withOpacity(0.1),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              onTap: (){
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SearchScreen(loggedUser:user,), ),  );
+                              },
+                              keyboardType: TextInputType.text,
+                              controller: searchController,
+                              textInputAction: TextInputAction.search,
+                              enableInteractiveSelection: true,
+                              readOnly:true,
+                              style: GoogleFonts.cairo(
+                                fontSize: 14.5,
+                                color: Colors.black87,
+                                letterSpacing: 0.5,
+                                fontWeight: FontWeight.w400,
                               ),
-                              child: TextField(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SearchScreen(
-                                        loggedUser: user,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                keyboardType: TextInputType.text,
-                                controller: searchController,
-                                textInputAction: TextInputAction.search,
-                                enableInteractiveSelection: true,
-                                readOnly: true,
-                                style: GoogleFonts.cairo(
+                              decoration: InputDecoration(
+                                contentPadding:
+                                EdgeInsets.symmetric(horizontal: 5.0, vertical: 8.0),
+                                prefixIcon: Icon(
+                                  Icons.search,
+                                  color: Theme.of(context).primaryColor,
+                                  size: 25.0,
+                                ),
+                                border: InputBorder.none,
+                                hintText: getTranslated(context, "search"),
+                                hintStyle: GoogleFonts.cairo(
                                   fontSize: 14.5,
-                                  color: Colors.black87,
+                                  color: Theme.of(context).primaryColor,
                                   letterSpacing: 0.5,
                                   fontWeight: FontWeight.w400,
                                 ),
-                                decoration: InputDecoration(
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 5.0, vertical: 8.0),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: Theme.of(context).primaryColor,
-                                    size: 25.0,
-                                  ),
-                                  border: InputBorder.none,
-                                  //hintText: getTranslated(context, "search"),
-                                  hintStyle: GoogleFonts.cairo(
-                                    fontSize: 14.5,
-                                    color: Theme.of(context).primaryColor,
-                                    letterSpacing: 0.5,
-                                    fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                           InkWell(
+                              splashColor: Colors.white.withOpacity(0.5),
+                              onTap: () {
+                                if (user != null && user.isDeveloper)
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          AllDevelopTechScreen(loggedUser: user),
+                                    ),
+                                  );
+                                else if (user != null && user.userType != "CONSULTANT")
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UserAccountScreen(
+                                          user: user, firstLogged: false),
+                                    ),
+                                  );
+                                else {
+                                  Navigator.pushNamed(context, '/Register_Type');
+                                }
+                              },
+                              child: Container(
+                                height: 50,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                ),
+                                child: userImage == null
+                                    ? Image.asset(
+                                  theme == "light"
+                                      ? 'assets/applicationIcons/whiteLogo.png'
+                                      : 'assets/applicationIcons/whiteLogo.png',
+                                  width: 70,
+                                  height: 70,
+                                )
+                                    : ClipRRect(
+                                  borderRadius: BorderRadius.circular(100.0),
+                                  child: FadeInImage.assetNetwork(
+                                    placeholder: theme == "light"
+                                        ? 'assets/applicationIcons/whiteLogo.png'
+                                        : 'assets/applicationIcons/whiteLogo.png',
+                                    //placeholderScale: 0.5,
+                                    imageErrorBuilder:
+                                        (context, error, stackTrace) => Icon(
+                                      Icons.person,
+                                      color: Colors.black,
+                                      size: 50.0,
+                                    ),
+                                    image: userImage,
+                                    fit: BoxFit.cover,
+                                    /* width: 50,
+                                        height: 50,*/
+                                    fadeInDuration: Duration(milliseconds: 250),
+                                    fadeInCurve: Curves.easeInOut,
+                                    fadeOutDuration: Duration(milliseconds: 150),
+                                    fadeOutCurve: Curves.easeInOut,
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DashboardScreen(),
-                                ),
-                              );
-                            },
-                            icon: Image.asset(
-                              theme == "light"
-                                  ? 'assets/applicationIcons/Iconly-Curved-Category.png'
-                                  : 'assets/applicationIcons/dashbord.png',
-                              width: 30,
-                              height: 30,
-                            ),
-                          ),
+
                         ],
                       ),
+                      SizedBox(height: 15,),
+                      Divider(
+                          height: 2,
+                          color:Colors.grey
+                      ),
+                      SizedBox(
+                        height: 20,
+                      ),
+                      Container(
+                          height: 90,
+                          width: size.width * .8,
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: AppColors.pink,
+                            borderRadius: BorderRadius.circular(20.0),
+                            boxShadow: [
+                              BoxShadow(
+                                offset: Offset(0, 0.0),
+                                blurRadius: 2.0,
+                                spreadRadius: 2.0,
+                                color: Colors.black.withOpacity(0.2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    appTitle,
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
+                                    style: GoogleFonts.cairo(
+                                      color: Colors.white,
+                                      fontSize: 14.0,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 5,
+                                ),
+
+                                SizedBox( height: 2,),
+                              ])),
                     ],
                   ),
                 ),
             ),
           ),
           SizedBox(
-            height: 50,
+            height: 25,
           ),
           Center(
             child:Container(
@@ -986,16 +1073,17 @@ class _HomePageState extends State<HomePage>
                             listText=getTranslated(context, "perfectText");
                           });
                         },
-                        child: Container(
+                        child:
+                        Container(
                           height: 40,
                           width: size.width * .22,
                           padding: const EdgeInsets.all(0),
                           decoration: BoxDecoration(
                             color: perfect
                                 ? theme == "light"
-                                ? AppColors.brown
+                                ? AppColors.pink
                                 : Colors.black
-                                : Colors.transparent,
+                                : AppColors.lightGrey,
                             borderRadius: BorderRadius.circular(20.0),
                           ),
                           child: Center(
@@ -1040,9 +1128,9 @@ class _HomePageState extends State<HomePage>
                           decoration: BoxDecoration(
                             color: glorified
                                 ? theme == "light"
-                                ? AppColors.brown
+                                ? AppColors.pink
                                 : Colors.black
-                                : Colors.transparent,
+                                : AppColors.lightGrey,
                             borderRadius: BorderRadius.circular(20.0),
                           ),
                           child: Center(
@@ -1086,9 +1174,9 @@ class _HomePageState extends State<HomePage>
                           decoration: BoxDecoration(
                             color: jeras
                                 ? theme == "light"
-                                ? AppColors.brown
+                                ? AppColors.pink
                                 : Colors.black
-                                : Colors.transparent,
+                                : AppColors.lightGrey,
                             borderRadius: BorderRadius.circular(20.0),
                           ),
                           child: Center(
@@ -1132,9 +1220,9 @@ class _HomePageState extends State<HomePage>
                           decoration: BoxDecoration(
                             color: vocal
                                 ? theme == "light"
-                                ? AppColors.brown
+                                ? AppColors.pink
                                 : Colors.black
-                                : Colors.transparent,
+                                : AppColors.lightGrey,
                             borderRadius: BorderRadius.circular(20.0),
                           ),
                           child: Center(
@@ -1174,7 +1262,7 @@ class _HomePageState extends State<HomePage>
           ),
           perfect?Expanded(
             child: PaginateFirestore(
-              itemBuilderType: PaginateBuilderType.listView,
+              itemBuilderType: PaginateBuilderType.gridView,
               padding: const EdgeInsets.only(
                   left: 20.0, right: 20.0, bottom: 16.0, top: 1.0),
               //Change types accordingly
@@ -1196,7 +1284,7 @@ class _HomePageState extends State<HomePage>
           ):SizedBox(),
           glorified?Expanded(
             child: PaginateFirestore(
-              itemBuilderType: PaginateBuilderType.listView,
+              itemBuilderType: PaginateBuilderType.gridView,
               padding: const EdgeInsets.only(
                   left: 20.0, right: 20.0, bottom: 16.0, top: 1.0),
               //Change types accordingly
@@ -1218,9 +1306,9 @@ class _HomePageState extends State<HomePage>
           ):SizedBox(),
           jeras?Expanded(
             child: PaginateFirestore(
-              itemBuilderType: PaginateBuilderType.listView,
+              itemBuilderType: PaginateBuilderType.gridView,
               padding: const EdgeInsets.only(
-                  left: 20.0, right: 20.0, bottom: 16.0, top: 1.0),
+                  left: 20.0, right: 20.0, bottom: 20.0, top: 5.0),
               //Change types accordingly
               itemBuilder: ( context, documentSnapshot,index) {
                 return ConsultantListItem(
@@ -1237,10 +1325,12 @@ class _HomePageState extends State<HomePage>
               // to fetch real-time data
               isLive: true,
             ),
-          ):SizedBox(),
+          ):SizedBox(
+            height: 10.0,
+          ),
           vocal?Expanded(
             child: PaginateFirestore(
-              itemBuilderType: PaginateBuilderType.listView,
+              itemBuilderType: PaginateBuilderType.gridView,
               padding: const EdgeInsets.only(
                   left: 20.0, right: 20.0, bottom: 16.0, top: 1.0),
               //Change types accordingly
@@ -1259,85 +1349,51 @@ class _HomePageState extends State<HomePage>
               // to fetch real-time data
               isLive: true,
             ),
-          ):SizedBox(),
+          ):SizedBox(
+            height: 10.0,
+          ),
         ],
       ),
-      Positioned(
-        right: 0.0,
-        top: (size.height * .23), //140.0,
-        left: 0,
-        child: Center(
-          child: Container(
-              height: 75,
-              width: size.width * .8,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20.0),
-                boxShadow: [
-                  BoxShadow(
-                    offset: Offset(0, 0.0),
-                    blurRadius: 2.0,
-                    spreadRadius: 2.0,
-                    color: Colors.black.withOpacity(0.2),
-                  ),
-                ],
+
+      Positioned(top: 200,
+        left: (MediaQuery.of(context).size.width/7),
+        child: Container(
+          height: 25,
+          width: size.width * 0.3,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10.0),
+            boxShadow: [
+              BoxShadow(
+                offset: Offset(0, 0.0),
+                blurRadius: 5.0,
+                spreadRadius: 1.0,
+                color: Colors.black.withOpacity(0.1),
               ),
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        appTitle,
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                        style: GoogleFonts.cairo(
-                          color: AppColors.pink,
-                          fontSize: 14.0,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: 5,
-                    ),
-                    Center(
-                      child: SizedBox(
-                        height: 25,
-                        width: size.width * 0.5,
-                        child: FlatButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => MoreScreen(),
-                              ),
-                            );
-                          },
-                          color: Theme.of(context).primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25.0),
-                          ),
-                          child: Text(
-                            getTranslated(context, "readMore"),
-                            style: GoogleFonts.cairo(
-                              color: AppColors.white,
-                              fontSize: 12.0,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox( height: 2,),
-                  ])),
+            ],
+          ),
+          child: FlatButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MoreScreen(),
+                ),
+              );
+            },
+
+            child: Text(
+              getTranslated(context, "readMore"),
+              style: GoogleFonts.cairo(
+                color: AppColors.pink,
+                fontSize: 12.0,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
         ),
       ),
-
     ]);
   }
 
@@ -1663,7 +1719,7 @@ class _HomePageState extends State<HomePage>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 1.0, vertical: 0.0),
                             decoration: BoxDecoration(
-                              color: avaliable ? AppColors.brown : AppColors.grey,
+                              color: avaliable ? AppColors.pink : AppColors.grey,
                               borderRadius: BorderRadius.circular(20.0),
                             ),
                             child: Center(
@@ -1709,7 +1765,7 @@ class _HomePageState extends State<HomePage>
           (fixed == true && load == false)
               ? Expanded(
             child: PaginateFirestore(
-              itemBuilderType: PaginateBuilderType.listView,
+              itemBuilderType: PaginateBuilderType.gridView,
               padding: const EdgeInsets.only(
                   left: 16.0, right: 16.0, bottom: 16.0, top: 16.0),
               //Change types accordingly
@@ -1733,7 +1789,7 @@ class _HomePageState extends State<HomePage>
           (wait == true && load == false)
               ? Expanded(
             child: PaginateFirestore(
-              itemBuilderType: PaginateBuilderType.listView,
+              itemBuilderType: PaginateBuilderType.gridView,
               padding: const EdgeInsets.only(
                   left: 16.0, right: 16.0, bottom: 16.0, top: 16.0),
               //Change types accordingly
@@ -1783,7 +1839,7 @@ class _HomePageState extends State<HomePage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     InkWell(
-                      splashColor: AppColors.brown.withOpacity(0.5),
+                      splashColor: AppColors.pink.withOpacity(0.5),
                       onTap: () {
                         setState(() {
                           wait = true;
@@ -1831,7 +1887,7 @@ class _HomePageState extends State<HomePage>
                       width: 5,
                     ),
                     InkWell(
-                      splashColor: AppColors.brown.withOpacity(0.5),
+                      splashColor: AppColors.pink.withOpacity(0.5),
                       onTap: () {
                         setState(() {
                           fixed = true;

@@ -211,6 +211,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.6.8"
+  dotted_border:
+    dependency: "direct main"
+    description:
+      name: dotted_border
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.0.0+2"
   equatable:
     dependency: transitive
     description:
@@ -460,7 +467,7 @@ packages:
     source: hosted
     version: "2.0.5"
   flutter_rating_bar:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_rating_bar
       url: "https://pub.dartlang.org"
@@ -1219,11 +1226,9 @@ packages:
   twilio_voice:
     dependency: "direct main"
     description:
-      path: "."
-      ref: master
-      resolved-ref: aaf3c65c1cf5f2faff3fbf713c28dd630cc38925
-      url: "https://github.com/Git-focalpoint/jerasTwilioVoiceCalling.git"
-    source: git
+      name: twilio_voice
+      url: "https://pub.dartlang.org"
+    source: hosted
     version: "0.0.9"
   typed_data:
     dependency: transitive
