@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "914705649736",
+    "project_id": "jeras-ui",
+    "storage_bucket": "jeras-ui.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:914705649736:android:04e2cb3262236be92d887d",
+        "android_client_info": {
+          "package_name": "com.app.jerasUI"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "914705649736-fj1fo6kcb1jpulao85jghg8878d8m4mt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJV92ZQuCPOHY0fpfpnc33iokxxshkhjA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "914705649736-fj1fo6kcb1jpulao85jghg8878d8m4mt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
